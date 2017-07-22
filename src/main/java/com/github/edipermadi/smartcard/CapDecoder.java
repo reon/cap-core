@@ -1,7 +1,9 @@
 package com.github.edipermadi.smartcard;
 
+import com.github.edipermadi.smartcard.exc.CapException;
+
 import java.io.InputStream;
 
 public interface CapDecoder {
-    void decode(InputStream stream);
+    Cap decode(InputStream stream) throws CapException;
 }
