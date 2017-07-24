@@ -3,13 +3,24 @@ package com.github.edipermadi.smartcard;
 import com.google.gson.annotations.SerializedName;
 import org.apache.commons.lang3.StringUtils;
 
-public final class CapHeaderBuilder {
+/**
+ * CAP header builder class
+ *
+ * @author Edi Permadi
+ */
+final class CapHeaderBuilder {
     private int headerVersion = -1;
     private int headerFlags = -1;
     private CapHeaderPackageInfo packageInfo;
     private CapHeaderPackageNameInfo packageName;
 
-    public CapHeaderBuilder setHeaderVersion(final int headerVersion) {
+    /**
+     * Set header version
+     *
+     * @param headerVersion header version
+     * @return this instance
+     */
+    CapHeaderBuilder setHeaderVersion(final int headerVersion) {
         if (headerVersion < 0) {
             throw new IllegalArgumentException("invalid header version");
         }
@@ -17,7 +28,13 @@ public final class CapHeaderBuilder {
         return this;
     }
 
-    public CapHeaderBuilder setHeaderFlags(final int headerFlags) {
+    /**
+     * Set header flags
+     *
+     * @param headerFlags header flags
+     * @return this instance
+     */
+    CapHeaderBuilder setHeaderFlags(final int headerFlags) {
         if (headerFlags < 0) {
             throw new IllegalArgumentException("invalid header flags");
         }
@@ -25,7 +42,14 @@ public final class CapHeaderBuilder {
         return this;
     }
 
-    public CapHeaderBuilder setPackageInfo(final int version, final String aid) {
+    /**
+     * Set package information
+     *
+     * @param version package info version
+     * @param aid     package AID
+     * @return this instance
+     */
+    CapHeaderBuilder setPackageInfo(final int version, final String aid) {
         if (version < 0) {
             throw new IllegalArgumentException("invalid package info version");
         } else if (StringUtils.isEmpty(aid)) {
@@ -35,12 +59,23 @@ public final class CapHeaderBuilder {
         return this;
     }
 
-    public CapHeaderBuilder setPackageName(final String name) {
+    /**
+     * Set package name
+     *
+     * @param name package name
+     * @return this instance
+     */
+    CapHeaderBuilder setPackageName(final String name) {
         this.packageName = new CapHeaderPackageNameInfo(name);
         return this;
     }
 
-    public Cap.Header build() {
+    /**
+     * Build CAP object
+     *
+     * @return CAP object
+     */
+    Cap.Header build() {
         if (headerVersion < 0) {
             throw new IllegalStateException("header version is mandatory");
         } else if (headerVersion < 0) {
@@ -75,7 +110,7 @@ public final class CapHeaderBuilder {
          *
          * @param builder cap header builder object
          */
-        public CapHeader(CapHeaderBuilder builder) {
+        CapHeader(CapHeaderBuilder builder) {
             this.version = builder.headerVersion;
             this.flags = builder.headerFlags;
             this.packageInfo = builder.packageInfo;
@@ -104,6 +139,11 @@ public final class CapHeaderBuilder {
         }
     }
 
+    /**
+     * CAP package info implementation
+     *
+     * @author Edi Permadi
+     */
     static final class CapHeaderPackageInfo implements Cap.Header.PackageInfo {
         @SerializedName("version")
         private final int version;
@@ -111,6 +151,11 @@ public final class CapHeaderBuilder {
         @SerializedName("aid")
         private final String aid;
 
+        /**
+         * Class constructor
+         * @param version information version
+         * @param aid package AID
+         */
         CapHeaderPackageInfo(final int version, final String aid) {
             this.version = version;
             this.aid = aid;
@@ -127,10 +172,19 @@ public final class CapHeaderBuilder {
         }
     }
 
+    /**
+     * CAP package name info implementation
+     *
+     * @author Edi Permadi
+     */
     static final class CapHeaderPackageNameInfo implements Cap.Header.PackageNameInfo {
         @SerializedName("name")
         private final String name;
 
+        /**
+         * Class constructor
+         * @param name CAP package name
+         */
         CapHeaderPackageNameInfo(final String name) {
             this.name = name;
         }

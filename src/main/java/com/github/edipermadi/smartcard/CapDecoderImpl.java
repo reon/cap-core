@@ -212,11 +212,11 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
             final int imageSize = dis.readShort();
             final int arrayInitCount = dis.readShort();
             final int arrayInitSize = dis.readShort();
-            builder.setStaticFieldSize(imageSize, arrayInitCount, arrayInitSize);
 
-            /* set import count and applet count */
-            builder.setImportCount(dis.readByte());
-            builder.setAppletCount(dis.readByte());
+            /* set static_field_size_info, import_count and applet_count */
+            builder.setStaticFieldSize(imageSize, arrayInitCount, arrayInitSize)
+                    .setImportCount(dis.readByte())
+                    .setAppletCount(dis.readByte());
 
             /* parse array of custom component info */
             final int customCount = dis.readByte();

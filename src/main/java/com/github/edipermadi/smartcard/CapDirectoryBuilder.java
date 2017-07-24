@@ -26,7 +26,7 @@ final class CapDirectoryBuilder {
      * @param arrayInitSize  array init size
      * @return this instance
      */
-    public CapDirectoryBuilder setStaticFieldSize(final int imageSize, final int arrayInitCount, final int arrayInitSize) {
+    CapDirectoryBuilder setStaticFieldSize(final int imageSize, final int arrayInitCount, final int arrayInitSize) {
         this.staticFieldSize = new CapDirectoryStaticFieldSizeInfo(imageSize, arrayInitCount, arrayInitSize);
         return this;
     }
@@ -37,7 +37,7 @@ final class CapDirectoryBuilder {
      * @param importCount new import count value
      * @return this instance
      */
-    public CapDirectoryBuilder setImportCount(final int importCount) {
+    CapDirectoryBuilder setImportCount(final int importCount) {
         if ((importCount < 0) || (importCount > 255)) {
             throw new IllegalArgumentException("invalid import count");
         }
@@ -52,7 +52,7 @@ final class CapDirectoryBuilder {
      * @param appletCount applet count
      * @return this instance
      */
-    public CapDirectoryBuilder setAppletCount(final int appletCount) {
+    CapDirectoryBuilder setAppletCount(final int appletCount) {
         if ((appletCount < 0) || (appletCount > 255)) {
             throw new IllegalArgumentException("invalid applet count");
         }
@@ -66,7 +66,7 @@ final class CapDirectoryBuilder {
      * @param componentSize component size to be added
      * @return this instance
      */
-    public CapDirectoryBuilder addComponentSize(final int componentSize) {
+    CapDirectoryBuilder addComponentSize(final int componentSize) {
         if ((componentSize < 0) || (componentSize > 65535)) {
             throw new IllegalArgumentException("invalid component size");
         }
@@ -81,7 +81,7 @@ final class CapDirectoryBuilder {
      * @param aid AID of custom component
      * @return this instance
      */
-    public CapDirectoryBuilder addCustomComponent(final int tag, final String aid) {
+    CapDirectoryBuilder addCustomComponent(final int tag, final String aid) {
         if ((tag < 128) || (tag > 255)) {
             throw new IllegalArgumentException("tag of custom components is invalid");
         } else if (StringUtils.isEmpty(aid)) {
@@ -96,7 +96,7 @@ final class CapDirectoryBuilder {
      *
      * @return CAP directory object
      */
-    public Cap.Directory build() {
+    Cap.Directory build() {
         if (componentSizes.isEmpty()) {
             throw new IllegalStateException("component sizes is mandatory");
         } else if (staticFieldSize == null) {
