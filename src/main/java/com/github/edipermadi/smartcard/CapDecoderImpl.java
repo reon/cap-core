@@ -1,8 +1,7 @@
 package com.github.edipermadi.smartcard;
 
-import com.github.edipermadi.smartcard.exc.CapDecodeHeaderException;
-import com.github.edipermadi.smartcard.exc.CapException;
-import com.github.edipermadi.smartcard.exc.CapFormatException;
+import com.github.edipermadi.smartcard.exc.*;
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
 
 import java.io.ByteArrayInputStream;
@@ -41,9 +40,11 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
 
                 switch (name) {
                     case COMPONENT_Header:
-                        builder.setHeader(processCapHeader(payload));
+                        builder.setHeader(decodeCapHeader(payload));
                         break;
                     case COMPONENT_Directory:
+                        builder.setDirectory(decodeCapDirectory(payload));
+                        break;
                     case COMPONENT_Applet:
                     case COMPONENT_Import:
                     case COMPONENT_ConstantPool:
@@ -66,7 +67,7 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
     }
 
     /**
-     * Parse CAP header. The following is the structure of CAP header
+     * Decode CAP header. The following is the structure of CAP header
      * <pre>
      * header_component {
      *     u1 tag
@@ -94,9 +95,9 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
      *
      * @param payload CAP header payload
      * @return CAP Header object
-     * @throws CapDecodeHeaderException when CAP Header decoding failed
+     * @throws CapDecodeException when CAP Header decoding failed
      */
-    private Cap.Header processCapHeader(byte[] payload) throws CapDecodeHeaderException {
+    private Cap.Header decodeCapHeader(byte[] payload) throws CapDecodeException {
         final CapHeaderBuilder builder = new CapHeaderBuilder();
         final ByteArrayInputStream bais = new ByteArrayInputStream(payload);
         final DataInputStream dis = new DataInputStream(bais);
@@ -109,8 +110,8 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
 
             /* parse size */
             final int size = dis.readShort();
-            if ((size + 3) != payload.length) {
-                throw CapDecodeHeaderException.invalidLength();
+            if (payload.length != (size + 3)) {
+                throw CapDecodeHeaderException.invalidSize();
             }
 
             /* parse magic */
@@ -130,8 +131,7 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
             if (dis.read(aid) != aidLength) {
                 throw CapDecodeHeaderException.invalidPackageAID();
             }
-            builder.setPackageInfoVersion(packageInfoVersion)
-                    .setAid(aid);
+            builder.setPackageInfo(packageInfoVersion, Hex.encodeHexString(aid));
 
             /* optionally set package name info */
             if (bais.available() > 0) {
@@ -141,12 +141,114 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
                     throw CapDecodeHeaderException.invalidPackageName();
                 }
 
-                builder.setPackageInfoName(new String(name, StandardCharsets.UTF_8));
+                builder.setPackageName(new String(name, StandardCharsets.UTF_8));
             }
 
             return builder.build();
         } catch (final IOException ex) {
-            throw new CapDecodeHeaderException("failed to parse CAP header", ex);
+            throw new CapDecodeException("failed to parse CAP header", ex);
+        } finally {
+            IOUtils.closeQuietly(dis);
+            IOUtils.closeQuietly(bais);
+        }
+    }
+
+    /**
+     * Decode CAP directory component. The following is the structure of directory component
+     * <pre>
+     * directory_component {
+     *     u1 tag
+     *     u2 size
+     *     u2 component_sizes[12]
+     *     static_field_size_info static_field_size
+     *     u1 import_count
+     *     u1 applet_count
+     *     u1 custom_count
+     *     custom_component_info custom_components[custom_count]
+     * }
+     *
+     * static_field_size_info {
+     *     u2 image_size
+     *     u2 array_init_count
+     *     u2 array_init_size
+     * }
+     *
+     * custom_component_info {
+     *     u1 component_tag
+     *     u2 size
+     *     u1 AID_length
+     *     u1 AID[AID_length]
+     * }
+     * </pre>
+     *
+     * @param payload CAP directory component payload
+     * @return CAP directory component
+     * @throws CapDecodeException when decoding failed
+     */
+    private Cap.Directory decodeCapDirectory(final byte[] payload) throws CapDecodeException {
+        final CapDirectoryBuilder builder = new CapDirectoryBuilder();
+        final ByteArrayInputStream bais = new ByteArrayInputStream(payload);
+        final DataInputStream dis = new DataInputStream(bais);
+        try {
+            /* parse tag */
+            final int componentTag = dis.readByte();
+            if (componentTag != TAG_COMPONENT_Directory) {
+                throw CapDecodeDirectoryException.invalidTag(componentTag);
+            }
+
+            /* parse size */
+            final int componentSize = dis.readShort();
+            if (dis.available() < componentSize) {
+                throw CapDecodeDirectoryException.invalidSize();
+            }
+
+            /* parse component sizes */
+            for (int i = 0; i < 11; i++) {
+                final int v = dis.readShort();
+                builder.addComponentSize(v);
+            }
+
+            /* parse static_field_size_info */
+            final int imageSize = dis.readShort();
+            final int arrayInitCount = dis.readShort();
+            final int arrayInitSize = dis.readShort();
+            builder.setStaticFieldSize(imageSize, arrayInitCount, arrayInitSize);
+
+            /* set import count and applet count */
+            builder.setImportCount(dis.readByte());
+            builder.setAppletCount(dis.readByte());
+
+            /* parse array of custom component info */
+            final int customCount = dis.readByte();
+            for (int i = 0; i < customCount; i++) {
+                /* decode component tag */
+                final int customComponentTag = dis.readByte();
+                if (customComponentTag < 128) {
+                    throw CapDecodeDirectoryException.invalidComponentTag();
+                }
+
+                /* decode component size */
+                final int customComponentSize = dis.readShort();
+                if (dis.available() < customComponentSize) {
+                    throw CapDecodeDirectoryException.truncatedComponent();
+                }
+
+                /* decode component AID */
+                final int customComponentAidLength = dis.readByte();
+                final byte[] customComponentAid = new byte[customComponentAidLength];
+                if (dis.read(customComponentAid) != customComponentAidLength) {
+                    throw CapDecodeDirectoryException.truncatedComponent();
+                }
+
+                builder.addCustomComponent(componentTag, Hex.encodeHexString(customComponentAid));
+            }
+
+            return builder.build();
+        } catch (final IOException ex) {
+            throw new CapDecodeException("failed to parse CAP directory", ex);
+        } finally {
+            IOUtils.closeQuietly(dis);
+            IOUtils.closeQuietly(bais);
         }
     }
 

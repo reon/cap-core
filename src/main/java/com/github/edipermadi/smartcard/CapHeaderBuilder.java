@@ -1,14 +1,13 @@
 package com.github.edipermadi.smartcard;
 
-import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.lang3.ArrayUtils;
+import com.google.gson.annotations.SerializedName;
+import org.apache.commons.lang3.StringUtils;
 
 public final class CapHeaderBuilder {
     private int headerVersion = -1;
     private int headerFlags = -1;
-    private int packageInfoVersion = -1;
-    private byte[] aid;
-    String packageInfoName;
+    private CapHeaderPackageInfo packageInfo;
+    private CapHeaderPackageNameInfo packageName;
 
     public CapHeaderBuilder setHeaderVersion(final int headerVersion) {
         if (headerVersion < 0) {
@@ -26,24 +25,18 @@ public final class CapHeaderBuilder {
         return this;
     }
 
-    public CapHeaderBuilder setPackageInfoVersion(final int packageInfoVersion) {
-        if (packageInfoVersion < 0) {
+    public CapHeaderBuilder setPackageInfo(final int version, final String aid) {
+        if (version < 0) {
             throw new IllegalArgumentException("invalid package info version");
-        }
-        this.packageInfoVersion = packageInfoVersion;
-        return this;
-    }
-
-    public CapHeaderBuilder setAid(final byte[] aid) {
-        if (ArrayUtils.isEmpty(aid)) {
+        } else if (StringUtils.isEmpty(aid)) {
             throw new IllegalArgumentException("invalid package AID");
         }
-        this.aid = aid;
+        this.packageInfo = new CapHeaderPackageInfo(version, aid);
         return this;
     }
 
-    public CapHeaderBuilder setPackageInfoName(final String packageInfoName) {
-        this.packageInfoName = packageInfoName;
+    public CapHeaderBuilder setPackageName(final String name) {
+        this.packageName = new CapHeaderPackageNameInfo(name);
         return this;
     }
 
@@ -52,61 +45,99 @@ public final class CapHeaderBuilder {
             throw new IllegalStateException("header version is mandatory");
         } else if (headerVersion < 0) {
             throw new IllegalStateException("header flags is mandatory");
-        } else if (packageInfoVersion < 0) {
-            throw new IllegalStateException("package info version is mandatory");
-        } else if (aid == null) {
-            throw new IllegalStateException("package AID is mandatory");
+        } else if (packageInfo == null) {
+            throw new IllegalStateException("package info is mandatory");
         }
 
-        return new Cap.Header() {
-            @Override
-            public int getVersion() {
-                return headerVersion;
-            }
+        return new CapHeader(this);
+    }
 
-            @Override
-            public int getFlags() {
-                return headerFlags;
-            }
+    /**
+     * CAP header component implementation
+     *
+     * @author Edi Permadi
+     */
+    static final class CapHeader implements Cap.Header {
+        @SerializedName("version")
+        private final int version;
 
-            @Override
-            public PackageInfo getPackageInfo() {
-                return new PackageInfo() {
-                    @Override
-                    public int getVersion() {
-                        return packageInfoVersion;
-                    }
+        @SerializedName("flags")
+        private final int flags;
 
-                    @Override
-                    public byte[] getAID() {
-                        return aid;
-                    }
-                };
-            }
+        @SerializedName("package")
+        CapHeaderPackageInfo packageInfo;
 
-            @Override
-            public PackageNameInfo getPackageNameInfo() {
-                return new PackageNameInfo() {
-                    @Override
-                    public String getName() {
-                        return packageInfoName;
-                    }
-                };
-            }
+        @SerializedName("package_name")
+        CapHeaderPackageNameInfo packageName;
 
-            @Override
-            public String toString() {
-                return new StringBuilder()
-                        .append(String.format("header :%n"))
-                        .append(String.format("  version : 0x%04x%n", headerVersion))
-                        .append(String.format("  flags   : 0x%02x%n", headerFlags))
-                        .append(String.format("  package_info%n"))
-                        .append(String.format("    version : 0x%04x%n", packageInfoVersion))
-                        .append(String.format("    AID     : %s%n", Hex.encodeHexString(aid)))
-                        .append(String.format("  package_name_info%n"))
-                        .append(String.format("    name     : %s%n", packageInfoName))
-                        .toString();
-            }
-        };
+        /**
+         * Class constructor
+         *
+         * @param builder cap header builder object
+         */
+        public CapHeader(CapHeaderBuilder builder) {
+            this.version = builder.headerVersion;
+            this.flags = builder.headerFlags;
+            this.packageInfo = builder.packageInfo;
+            this.packageInfo = builder.packageInfo;
+            this.packageName = builder.packageName;
+        }
+
+        @Override
+        public int getVersion() {
+            return version;
+        }
+
+        @Override
+        public int getFlags() {
+            return flags;
+        }
+
+        @Override
+        public PackageInfo getPackage() {
+            return packageInfo;
+        }
+
+        @Override
+        public PackageNameInfo getPackageName() {
+            return packageName;
+        }
+    }
+
+    static final class CapHeaderPackageInfo implements Cap.Header.PackageInfo {
+        @SerializedName("version")
+        private final int version;
+
+        @SerializedName("aid")
+        private final String aid;
+
+        CapHeaderPackageInfo(final int version, final String aid) {
+            this.version = version;
+            this.aid = aid;
+        }
+
+        @Override
+        public int getVersion() {
+            return version;
+        }
+
+        @Override
+        public String getAID() {
+            return aid;
+        }
+    }
+
+    static final class CapHeaderPackageNameInfo implements Cap.Header.PackageNameInfo {
+        @SerializedName("name")
+        private final String name;
+
+        CapHeaderPackageNameInfo(final String name) {
+            this.name = name;
+        }
+
+        @Override
+        public String getName() {
+            return name;
+        }
     }
 }

@@ -19,6 +19,6 @@ public final class CapDecoderTest {
         final CapDecoder decoder = new CapDecoderImpl();
         final Cap cap = decoder.decode(fis);
         Assert.assertNotNull(cap);
-        Reporter.log(cap.getHeader().toString(), true);
+        Reporter.log(cap.toString(), true);
     }
 }

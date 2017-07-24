@@ -15,6 +15,7 @@ abstract class CapDecoderImplBase {
     static final String COMPONENT_Debug = "Debug.cap";
 
     static final int TAG_COMPONENT_Header = 1;
+    static final int TAG_COMPONENT_Directory = 2;
 
     static final int ACC_INT = 0x01;
     static final int ACC_EXPORT = 0x02;

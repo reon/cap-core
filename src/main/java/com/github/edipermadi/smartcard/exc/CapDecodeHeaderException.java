@@ -13,8 +13,8 @@ public class CapDecodeHeaderException extends CapDecodeException {
         return new CapDecodeHeaderException("unexpected CAP header tag " + tag);
     }
 
-    public static CapDecodeHeaderException invalidLength() {
-        return new CapDecodeHeaderException("invalid CAP header length");
+    public static CapDecodeHeaderException invalidSize() {
+        return new CapDecodeHeaderException("invalid CAP header size");
     }
 
     public static CapDecodeHeaderException invalidMagic() {
