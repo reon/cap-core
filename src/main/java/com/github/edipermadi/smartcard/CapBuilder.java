@@ -13,6 +13,7 @@ public final class CapBuilder {
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private Cap.Header header;
     private Cap.Directory directory;
+    private Cap.Applet applet;
 
     /**
      * Set CAP header component
@@ -35,7 +36,24 @@ public final class CapBuilder {
      * @return this instance
      */
     public CapBuilder setDirectory(final Cap.Directory directory) {
+        if (directory == null) {
+            throw new IllegalArgumentException("CAP directory is null");
+        }
         this.directory = directory;
+        return this;
+    }
+
+    /**
+     * Set CAP applet component
+     *
+     * @param applet applet component
+     * @return this instance
+     */
+    public CapBuilder setApplet(final Cap.Applet applet) {
+        if (applet == null) {
+            throw new IllegalArgumentException("CAP applet is null");
+        }
+        this.applet = applet;
         return this;
     }
 
@@ -66,6 +84,9 @@ public final class CapBuilder {
         @SerializedName("directory")
         private final CapDirectoryBuilder.CapDirectory directory;
 
+        @SerializedName("applet")
+        private final CapAppletBuilder.CapApplet applet;
+
         /**
          * Class constructor
          *
@@ -74,6 +95,7 @@ public final class CapBuilder {
         CapImpl(final CapBuilder builder) {
             this.header = (CapHeaderBuilder.CapHeader) builder.header;
             this.directory = (CapDirectoryBuilder.CapDirectory) builder.directory;
+            this.applet = (CapAppletBuilder.CapApplet)builder.applet;
         }
 
         @Override
@@ -84,6 +106,11 @@ public final class CapBuilder {
         @Override
         public Directory getDirectory() {
             return directory;
+        }
+
+        @Override
+        public Applet getApplet() {
+            return applet;
         }
 
         @Override

@@ -23,6 +23,13 @@ public interface Cap {
     Directory getDirectory();
 
     /**
+     * Get CAP applet component
+     *
+     * @return CAP applet component
+     */
+    Applet getApplet();
+
+    /**
      * CAP header component interface
      *
      * @author Edi Permadi
@@ -161,5 +168,41 @@ public interface Cap {
              */
             String getAID();
         }
+    }
+
+    /**
+     * CAP applet component interface
+     *
+     * @author Edi Permadi
+     */
+    interface Applet {
+        /**
+         * Get list of applets
+         *
+         * @return list of applets
+         */
+        List<Info> getApplets();
+
+        /**
+         * Applet information interface
+         *
+         * @author Edi Permadi
+         */
+        interface Info {
+            /**
+             * get application identifier
+             *
+             * @return application identifier (hex-string)
+             */
+            String getAID();
+
+            /**
+             * Get installation offset
+             *
+             * @return installation offset
+             */
+            int getInstallMethodOffset();
+        }
+
     }
 }

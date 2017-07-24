@@ -25,7 +25,15 @@ public class CapDecodeHeaderException extends CapDecodeException {
         return new CapDecodeHeaderException("invalid CAP header package AID");
     }
 
+    public static CapDecodeHeaderException invalidPackageNameLength() {
+        return new CapDecodeHeaderException("invalid CAP header package name length");
+    }
+
     public static CapDecodeHeaderException invalidPackageName() {
         return new CapDecodeHeaderException("invalid CAP header package name");
+    }
+
+    public static CapDecodeHeaderException invalidAidLength() {
+        return new CapDecodeHeaderException("invalid CAP header AID length");
     }
 }

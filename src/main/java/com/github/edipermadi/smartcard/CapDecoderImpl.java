@@ -3,6 +3,7 @@ package com.github.edipermadi.smartcard;
 import com.github.edipermadi.smartcard.exc.*;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.ArrayUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -46,6 +47,8 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
                         builder.setDirectory(decodeCapDirectory(payload));
                         break;
                     case COMPONENT_Applet:
+                        builder.setApplet(decodeCapApplet(payload));
+                        break;
                     case COMPONENT_Import:
                     case COMPONENT_ConstantPool:
                     case COMPONENT_Class:
@@ -97,26 +100,30 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
      * @return CAP Header object
      * @throws CapDecodeException when CAP Header decoding failed
      */
-    private Cap.Header decodeCapHeader(byte[] payload) throws CapDecodeException {
+    private Cap.Header decodeCapHeader(final byte[] payload) throws CapDecodeException {
+        if (ArrayUtils.isEmpty(payload)) {
+            throw new IllegalArgumentException("header payload is null");
+        }
+
         final CapHeaderBuilder builder = new CapHeaderBuilder();
         final ByteArrayInputStream bais = new ByteArrayInputStream(payload);
         final DataInputStream dis = new DataInputStream(bais);
         try {
             /* parse tag */
-            final int tag = dis.readByte();
-            if (tag != TAG_COMPONENT_Header) {
-                throw CapDecodeHeaderException.invalidTag(tag);
+            final int componentTag = dis.readByte();
+            if (componentTag != TAG_COMPONENT_Header) {
+                throw CapDecodeHeaderException.invalidTag(componentTag);
             }
 
             /* parse size */
-            final int size = dis.readShort();
-            if (payload.length != (size + 3)) {
+            final int componentSize = dis.readShort();
+            if ((componentSize < 0) || (dis.available() < componentSize)) {
                 throw CapDecodeHeaderException.invalidSize();
             }
 
             /* parse magic */
-            final int magic = dis.readInt();
-            if (magic != 0xdecaffed) {
+            final int componentMagicCode = dis.readInt();
+            if (componentMagicCode != 0xdecaffed) {
                 throw CapDecodeHeaderException.invalidMagic();
             }
 
@@ -127,6 +134,11 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
             /* parse package info */
             final int packageInfoVersion = parseVersion(dis);
             final int aidLength = dis.readByte();
+            if ((aidLength < 5) || (aidLength > 16)) {
+                throw CapDecodeHeaderException.invalidAidLength();
+            }
+
+            /* parse AID payload */
             final byte[] aid = new byte[aidLength];
             if (dis.read(aid) != aidLength) {
                 throw CapDecodeHeaderException.invalidPackageAID();
@@ -136,12 +148,19 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
             /* optionally set package name info */
             if (bais.available() > 0) {
                 final int nameLength = dis.readByte();
-                final byte[] name = new byte[nameLength];
-                if (dis.read(name) != nameLength) {
-                    throw CapDecodeHeaderException.invalidPackageName();
+                if (nameLength < 0) {
+                    throw CapDecodeHeaderException.invalidPackageNameLength();
                 }
 
-                builder.setPackageName(new String(name, StandardCharsets.UTF_8));
+                /* parse package name */
+                if (nameLength > 0) {
+                    final byte[] name = new byte[nameLength];
+                    if (dis.read(name) != nameLength) {
+                        throw CapDecodeHeaderException.invalidPackageName();
+                    }
+
+                    builder.setPackageName(new String(name, StandardCharsets.UTF_8));
+                }
             }
 
             return builder.build();
@@ -186,6 +205,10 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
      * @throws CapDecodeException when decoding failed
      */
     private Cap.Directory decodeCapDirectory(final byte[] payload) throws CapDecodeException {
+        if (ArrayUtils.isEmpty(payload)) {
+            throw new IllegalArgumentException("directory payload is null");
+        }
+
         final CapDirectoryBuilder builder = new CapDirectoryBuilder();
         final ByteArrayInputStream bais = new ByteArrayInputStream(payload);
         final DataInputStream dis = new DataInputStream(bais);
@@ -198,7 +221,7 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
 
             /* parse size */
             final int componentSize = dis.readShort();
-            if (dis.available() < componentSize) {
+            if ((componentSize < 0) || (dis.available() < componentSize)) {
                 throw CapDecodeDirectoryException.invalidSize();
             }
 
@@ -220,6 +243,10 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
 
             /* parse array of custom component info */
             final int customCount = dis.readByte();
+            if ((customCount < 0) || (customCount > 127)) {
+                throw CapDecodeDirectoryException.invalidComponentTag();
+            }
+
             for (int i = 0; i < customCount; i++) {
                 /* decode component tag */
                 final int customComponentTag = dis.readByte();
@@ -233,8 +260,13 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
                     throw CapDecodeDirectoryException.truncatedComponent();
                 }
 
-                /* decode component AID */
+                /* decode component AID length */
                 final int customComponentAidLength = dis.readByte();
+                if ((customComponentAidLength < 5) || (customComponentAidLength > 16)) {
+                    throw CapDecodeDirectoryException.invalidCustomComponentAIDLength();
+                }
+
+                /* decode component AID payload */
                 final byte[] customComponentAid = new byte[customComponentAidLength];
                 if (dis.read(customComponentAid) != customComponentAidLength) {
                     throw CapDecodeDirectoryException.truncatedComponent();
@@ -246,6 +278,72 @@ public class CapDecoderImpl extends CapDecoderImplBase implements CapDecoder {
             return builder.build();
         } catch (final IOException ex) {
             throw new CapDecodeException("failed to parse CAP directory", ex);
+        } finally {
+            IOUtils.closeQuietly(dis);
+            IOUtils.closeQuietly(bais);
+        }
+    }
+
+    /**
+     * Decode CAP Applet
+     *
+     * @param payload CAP applet component payload
+     * @return CAP applet component object
+     * @throws CapDecodeException hwn decoding failed
+     */
+    private Cap.Applet decodeCapApplet(final byte[] payload) throws CapDecodeException {
+        if (ArrayUtils.isEmpty(payload)) {
+            throw new IllegalArgumentException("applet payload is null");
+        }
+
+        final CapAppletBuilder builder = new CapAppletBuilder();
+        final ByteArrayInputStream bais = new ByteArrayInputStream(payload);
+        final DataInputStream dis = new DataInputStream(bais);
+        try {
+            /* parse tag */
+            final int componentTag = dis.readByte();
+            if (componentTag != TAG_COMPONENT_Applet) {
+                throw CapDecodeAppletException.invalidTag(componentTag);
+            }
+
+            /* parse size */
+            final int componentSize = dis.readShort();
+            if ((componentSize < 0) || (dis.available() < componentSize)) {
+                throw CapDecodeAppletException.invalidSize();
+            }
+
+            /* parse count of applet */
+            final int count = dis.readByte();
+            if (count < 1) {
+                throw CapDecodeAppletException.invalidAppletCount();
+            }
+
+            /* parse applet entries */
+            for (int i = 0; i < count; i++) {
+                /* parse AID length */
+                int aidLength = dis.readByte();
+                if ((aidLength < 5) || (aidLength > 16)) {
+                    throw CapDecodeAppletException.invalidAIDLength();
+                }
+
+                /* parse AID */
+                final byte[] aid = new byte[aidLength];
+                if (dis.read(aid) != aidLength) {
+                    throw CapDecodeAppletException.invalidAID();
+                }
+
+                /* parse install method offset */
+                final int installMethodOffset = dis.readShort();
+                if (installMethodOffset < 0) {
+                    throw CapDecodeAppletException.invalidInstallMethodOffset();
+                }
+
+                builder.addApplet(Hex.encodeHexString(aid), installMethodOffset);
+            }
+
+            return builder.build();
+        } catch (final IOException ex) {
+            throw new CapDecodeException("failed to parse CAP applet", ex);
         } finally {
             IOUtils.closeQuietly(dis);
             IOUtils.closeQuietly(bais);

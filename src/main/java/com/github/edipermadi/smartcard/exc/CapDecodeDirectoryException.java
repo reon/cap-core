@@ -29,4 +29,8 @@ public final class CapDecodeDirectoryException extends CapDecodeException {
     public static CapDecodeException truncatedComponent() {
         return new CapDecodeDirectoryException("component is truncated");
     }
+
+    public static CapDecodeException invalidCustomComponentAIDLength() {
+        return new CapDecodeDirectoryException("custom component AUD is invalid");
+    }
 }

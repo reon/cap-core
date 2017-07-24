@@ -16,6 +16,7 @@ abstract class CapDecoderImplBase {
 
     static final int TAG_COMPONENT_Header = 1;
     static final int TAG_COMPONENT_Directory = 2;
+    static final int TAG_COMPONENT_Applet = 3;
 
     static final int ACC_INT = 0x01;
     static final int ACC_EXPORT = 0x02;
