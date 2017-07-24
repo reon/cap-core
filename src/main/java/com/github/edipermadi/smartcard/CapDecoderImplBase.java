@@ -1,5 +1,10 @@
 package com.github.edipermadi.smartcard;
 
+/**
+ * CAP decoder base implementation
+ *
+ * @author Edi Permadi
+ */
 abstract class CapDecoderImplBase {
     static final String COMPONENT_Header = "Header.cap";
     static final String COMPONENT_Directory = "Directory.cap";
